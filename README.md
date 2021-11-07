@@ -22,7 +22,7 @@ Watch an introduction to TigerBeetle on [Zig SHOWTIME](https://www.youtube.com/w
 
 This C# implementation is based on the same principles regarding performance and memory efficiency adopted by TigerBeetle. In many places, this C# version is just a line-by-line port of the Zig code. 
 
-Currently, the same benchmark runs ~30% slower than the Zig implementation.
+Currently, the same C# benchmark runs 30~40% slower than the Zig implementation.
 
 ## License
 
