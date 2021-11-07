@@ -24,7 +24,7 @@ This C# implementation is based on the same principles regarding performance and
 
 ### 1. One million transactions, 5.000 per batch
 
-Currently, the C# benchmark runs up to ~40% slower than the Zig implementation, using the default parameters.
+Currently, the C# benchmark runs ~40% slower than the Zig implementation, using the default parameters.
 
 ```
 MAX_TRANSFERS = 1_000_000;
@@ -32,10 +32,10 @@ IS_TWO_PHASE_COMMIT = false;
 BATCH_SIZE = 5_000;
 ```
 
-> Zig
+Zig
 > ![5000 batches in zig](./assets/5000_zig.JPG)
 
-> C#
+C#
 > ![5000 in C#](./assets/5000_dotnet.JPG)
 
 
@@ -49,10 +49,10 @@ IS_TWO_PHASE_COMMIT = false;
 BATCH_SIZE = 1000;
 ```
 
-> Zig
+Zig
 > ![1000 batches in zig](./assets/1000_zig.JPG)
 
-> C#
+C#
 > ![1000 in C#](./assets/1000_dotnet.JPG)
 
 ### 3. Two-phase transactions, only 2 per batch
@@ -65,10 +65,10 @@ IS_TWO_PHASE_COMMIT = true;
 BATCH_SIZE = 2;
 ```
 
-> Zig
+Zig
 > ![500 batches in zig](./assets/2_twophase_zig.JPG)
 
-> C#
+C#
 > ![500 in C#](./assets/2_twophase_dotnet.JPG)
 
 ### 4. Profiling
