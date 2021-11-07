@@ -27,6 +27,8 @@ namespace TigerBeetle
 
 		#region Fields
 
+		private readonly Timer tickTimer;
+
 		private readonly MessageBus bus;
 
 		/// A universally unique identifier for the client (must not be zero).
@@ -108,17 +110,18 @@ namespace TigerBeetle
 
 			requestQueue = new Queue<RequestData>(Config.MessageBusMessagesMax - 1);
 
-			//TODO:
-			//pingTimeout.Start();
-			//tickTimer = new Task(async () =>
-			//{
-			//    for (; ; )
-			//    {
-			//        Tick();
-			//        await Task.Delay((int)Config.TickMs);
-			//    }
-			//}, TaskCreationOptions.LongRunning);
-			//tickTimer.Start();
+			pingTimeout.Start();
+			tickTimer = new Timer(onTick, null, 0, 10);
+		}
+
+		int ticking;
+		private void onTick(object state)
+		{
+			if (Interlocked.CompareExchange(ref ticking, 1, 0) == 0)
+			{
+				Tick();
+				ticking = 0;
+			}
 		}
 
 		#endregion Constructor
@@ -264,7 +267,7 @@ namespace TigerBeetle
 			return completionSource.Task;
 		}
 
-		public void Tick()
+		private void Tick()
 		{
 			ticks += 1;
 
@@ -490,8 +493,7 @@ namespace TigerBeetle
 					view = reply.Header.View;
 				}
 
-				//TODO
-				//self.request_timeout.stop();
+				requestTimeout.Stop();
 
 				if (inflight.message.Header.Operation == Operation.Register)
 				{
@@ -616,9 +618,8 @@ namespace TigerBeetle
 
 			Trace.TraceInformation($"{id}: send_request_for_the_first_time: request={message.Header.Request} checksum={message.Header.Checksum}");
 
-			//TODO:
-			//Trace.Assert(!requestTimeout.ticking);
-			//self.request_timeout.start();
+			Trace.Assert(!requestTimeout.Ticking);
+			requestTimeout.Start();
 
 			// If our view number is out of date, then the old leader will forward our request.
 			// If the leader is offline, then our request timeout will fire and we will round-robin.

@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Net;
+using System.Net.Sockets;
 
 namespace TigerBeetle.Protocol
 {
 	internal sealed class MessageBus
 	{
 		#region Fields
+
+		internal readonly IO io;
 
 		private readonly MessagePool pool;
 
@@ -76,6 +79,7 @@ namespace TigerBeetle.Protocol
 			this.prng = prgn;
 
 			this.messageReceivedCallback = messageReceivedCallback;
+			this.io = new IO();
 		}
 
 		#endregion Constructor
@@ -88,10 +92,13 @@ namespace TigerBeetle.Protocol
 
 		public void Tick()
 		{
+			//io.Tick();
+
 			// The client connects to all replicas.
 			for (byte replica = 0; replica < replicas.Length; replica++)
 			{
 				MaybeConnectToReplica(replica);
+				//io.Tick();
 			}
 		}
 

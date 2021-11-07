@@ -38,13 +38,15 @@ namespace TigerBeetle.Benchmarks
 			{
 				Console.WriteLine("executing batches...");
 
-				while (Batches.TryDequeue(out (Func<Task> action, bool isCommit) tuple))
+				while (Batches.TryPeek(out (Func<Task> action, bool isCommit) tuple))
 				{
 					globalTimer.Start();
 					timer.Restart();
 					await tuple.action();
 					timer.Stop();
 					globalTimer.Stop();
+
+					_ = Batches.Dequeue();
 
 					if (tuple.isCommit)
 					{
@@ -73,9 +75,9 @@ namespace TigerBeetle.Benchmarks
 
 		#region Fields
 
-		private const int MAX_TRANSFERS = 1_000_000;
+		private const int MAX_TRANSFERS = 50_000;
 		private const bool IS_TWO_PHASE_COMMIT = false;
-		private const int BATCH_SIZE = 5_000;
+		private const int BATCH_SIZE = 500;
 
 		#endregion Fields
 
@@ -83,8 +85,10 @@ namespace TigerBeetle.Benchmarks
 
 		public static async Task Main()
 		{
+
+			Console.WriteLine("Benchmarking.Net ...");
 			var queue = new TimedQueue();
-			var client = new Client(0, new IPEndPoint[] { IPEndPoint.Parse("127.0.0.1:3001") });
+			var client = new Client(0, new IPEndPoint[] { IPEndPoint.Parse("192.168.105.95:3001") });
 			WaitForConnect(client);
 
 			var accounts = new[] {
@@ -132,11 +136,12 @@ namespace TigerBeetle.Benchmarks
 			Console.WriteLine("creating accounts...");
 
 			async Task createAccounts() => _ = await client.CreateAccountsAsync(accounts);
+
 			queue.Batches.Enqueue((createAccounts, false));
 			await queue.Execute();
 			Trace.Assert(queue.Batches.Count == 0);
 
-			Console.WriteLine("batching transfers...\n");
+			Console.WriteLine("batching transfers...");
 			queue.Reset();
 
 			int batchCount = 0;
@@ -163,7 +168,7 @@ namespace TigerBeetle.Benchmarks
 
 			Trace.Assert(count == MAX_TRANSFERS);
 
-			Console.Write("starting benchmark...\n");
+			Console.Write("starting benchmark...");
 			await queue.Execute();
 			Trace.Assert(queue.Batches.Count == 0);
 
@@ -171,7 +176,7 @@ namespace TigerBeetle.Benchmarks
 
 			var result = (long)((transfers.Length * 1000) / queue.TotalTime);
 
-			Console.WriteLine($"{result} {(IS_TWO_PHASE_COMMIT ? "two-phase commit " : "")}transfers per second");
+			Console.WriteLine($"{result} {(IS_TWO_PHASE_COMMIT ? "two-phase commit " : "")}transfers per second\n");
 			Console.WriteLine($"create_transfers max p100 latency per {BATCH_SIZE} transfers = {queue.MaxTransfersLatency}ms");
 			Console.WriteLine($"commit_transfers max p100 latency per {BATCH_SIZE} transfers = {queue.MaxCommitsLatency}ms");
 		}
@@ -180,7 +185,6 @@ namespace TigerBeetle.Benchmarks
 		{
 			for (int i = 0; i < 20; i++)
 			{
-				client.Tick();
 				System.Threading.Thread.Sleep(10);
 			}
 		}
