@@ -6,12 +6,6 @@ namespace TigerBeetle.Protocol
 {
 	internal sealed class MessageBus
 	{
-		#region Events
-
-		public event Action<Message> MessageReceived = default!;
-
-		#endregion Events
-
 		#region Fields
 
 		private readonly MessagePool pool;
@@ -38,6 +32,8 @@ namespace TigerBeetle.Protocol
 
 		private readonly Random prng;
 
+		private readonly Action<Message> messageReceivedCallback;
+
 		#endregion Fields
 
 		#region Properties
@@ -59,7 +55,7 @@ namespace TigerBeetle.Protocol
 
 		#region Constructor
 
-		public MessageBus(Random prgn, uint cluster, IPEndPoint[] configuration)
+		public MessageBus(Random prgn, uint cluster, IPEndPoint[] configuration, Action<Message> messageReceivedCallback)
 		{
 			Trace.Assert(Config.ConnectionsMax > configuration.Length);
 
@@ -78,6 +74,8 @@ namespace TigerBeetle.Protocol
 
 			this.configuration = configuration;
 			this.prng = prgn;
+
+			this.messageReceivedCallback = messageReceivedCallback;
 		}
 
 		#endregion Constructor
@@ -142,7 +140,7 @@ namespace TigerBeetle.Protocol
 
 		public void Unref(Message message) => pool.Unref(message);
 
-		public void OnMessage(Message message) => MessageReceived?.Invoke(message);
+		public void OnMessage(Message message) => messageReceivedCallback(message);
 
 		#endregion Methods
 	}

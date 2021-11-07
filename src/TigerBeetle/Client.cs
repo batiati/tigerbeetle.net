@@ -90,8 +90,7 @@ namespace TigerBeetle
 			replicaCount = (byte)configuration.Length;
 			prng = new Random(this.id.AsReadOnlySpan<int>()[0]);
 
-			bus = new MessageBus(prng, cluster, configuration);
-			bus.MessageReceived += OnMessageReceived;
+			bus = new MessageBus(prng, cluster, configuration, OnMessageReceived);
 
 			requestTimeout = new Protocol.Timeout
 			{
