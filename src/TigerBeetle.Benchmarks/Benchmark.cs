@@ -83,6 +83,7 @@ namespace TigerBeetle.Benchmarks
 
 		public static async Task Main()
 		{
+			Console.WriteLine("Benchmarking.Net ...");
 			var queue = new TimedQueue();
 			var client = new Client(0, new IPEndPoint[] { IPEndPoint.Parse("127.0.0.1:3001") });
 			WaitForConnect(client);
@@ -136,7 +137,7 @@ namespace TigerBeetle.Benchmarks
 			await queue.Execute();
 			Trace.Assert(queue.Batches.Count == 0);
 
-			Console.WriteLine("batching transfers...\n");
+			Console.WriteLine("batching transfers...");
 			queue.Reset();
 
 			int batchCount = 0;
@@ -163,7 +164,7 @@ namespace TigerBeetle.Benchmarks
 
 			Trace.Assert(count == MAX_TRANSFERS);
 
-			Console.Write("starting benchmark...\n");
+			Console.WriteLine("starting benchmark...");
 			await queue.Execute();
 			Trace.Assert(queue.Batches.Count == 0);
 
@@ -171,7 +172,7 @@ namespace TigerBeetle.Benchmarks
 
 			var result = (long)((transfers.Length * 1000) / queue.TotalTime);
 
-			Console.WriteLine($"{result} {(IS_TWO_PHASE_COMMIT ? "two-phase commit " : "")}transfers per second");
+			Console.WriteLine($"{result} {(IS_TWO_PHASE_COMMIT ? "two-phase commit " : "")}transfers per second\n");
 			Console.WriteLine($"create_transfers max p100 latency per {BATCH_SIZE} transfers = {queue.MaxTransfersLatency}ms");
 			Console.WriteLine($"commit_transfers max p100 latency per {BATCH_SIZE} transfers = {queue.MaxCommitsLatency}ms");
 		}
