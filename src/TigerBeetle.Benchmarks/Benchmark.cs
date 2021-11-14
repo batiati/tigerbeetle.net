@@ -16,7 +16,6 @@ namespace TigerBeetle.Benchmarks
 			#region Fields
 
 			private Stopwatch timer = new Stopwatch();
-			private Stopwatch globalTimer = new Stopwatch();
 
 			#endregion Fields
 
@@ -28,7 +27,7 @@ namespace TigerBeetle.Benchmarks
 
 			public long MaxCommitsLatency { get; private set; }
 
-			public long TotalTime => globalTimer.ElapsedMilliseconds;
+			public long TotalTime { get; private set; }
 
 			#endregion Properties
 
@@ -36,15 +35,15 @@ namespace TigerBeetle.Benchmarks
 
 			public async Task Execute()
 			{
-				Console.WriteLine("executing batches...");
-
-				while (Batches.TryDequeue(out (Func<Task> action, bool isCommit) tuple))
+				while (Batches.TryPeek(out (Func<Task> action, bool isCommit) tuple))
 				{
-					globalTimer.Start();
 					timer.Restart();
 					await tuple.action();
 					timer.Stop();
-					globalTimer.Stop();
+
+					TotalTime += timer.ElapsedMilliseconds;
+
+					_ = Batches.Dequeue();
 
 					if (tuple.isCommit)
 					{
@@ -62,7 +61,7 @@ namespace TigerBeetle.Benchmarks
 				MaxCommitsLatency = 0;
 				MaxTransfersLatency = 0;
 				timer.Reset();
-				globalTimer.Reset();
+				TotalTime = 0;
 				Batches.Clear();
 			}
 
@@ -83,10 +82,17 @@ namespace TigerBeetle.Benchmarks
 
 		public static async Task Main()
 		{
-			Console.WriteLine("Benchmarking.Net ...");
+			string[] args = Environment.GetCommandLineArgs();
+
+			var clientType = ClientType.Managed;
+			if (args.Length > 1) Enum.TryParse<ClientType>(args.Last(), ignoreCase: true, out clientType);
+
+			Console.WriteLine($"Benchmarking.Net ... ClientType {clientType}");
+
 			var queue = new TimedQueue();
-			var client = new Client(0, new IPEndPoint[] { IPEndPoint.Parse("127.0.0.1:3001") });
-			WaitForConnect(client);
+			var client = new Client(clientType, 0, new IPEndPoint[] { IPEndPoint.Parse("127.0.0.1:3001") });
+			
+			WaitForConnect();
 
 			var accounts = new[] {
 				new Account
@@ -133,6 +139,7 @@ namespace TigerBeetle.Benchmarks
 			Console.WriteLine("creating accounts...");
 
 			async Task createAccounts() => _ = await client.CreateAccountsAsync(accounts);
+
 			queue.Batches.Enqueue((createAccounts, false));
 			await queue.Execute();
 			Trace.Assert(queue.Batches.Count == 0);
@@ -149,6 +156,7 @@ namespace TigerBeetle.Benchmarks
 				if (batch.Count() == 0) break;
 
 				async Task createTransfers() => _ = await client.CreateTransfersAsync(batch);
+
 				queue.Batches.Enqueue((createTransfers, false));
 
 				if (IS_TWO_PHASE_COMMIT)
@@ -177,12 +185,11 @@ namespace TigerBeetle.Benchmarks
 			Console.WriteLine($"commit_transfers max p100 latency per {BATCH_SIZE} transfers = {queue.MaxCommitsLatency}ms");
 		}
 
-		private static void WaitForConnect(Client client)
+		private static void WaitForConnect()
 		{
 			for (int i = 0; i < 20; i++)
 			{
-				client.Tick();
-				System.Threading.Thread.Sleep(10);
+				System.Threading.Thread.Sleep(5);
 			}
 		}
 

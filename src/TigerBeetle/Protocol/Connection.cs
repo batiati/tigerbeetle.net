@@ -26,12 +26,6 @@ namespace TigerBeetle.Protocol
 
 		private Timer? connectWithExponentialBackoffTimer;
 
-		/// This completion is used for all recv operations.
-		private readonly SocketAsyncEventArgs recvAsyncEvent;
-
-		/// It is used for the initial connect when establishing a replica connection.
-		private readonly SocketAsyncEventArgs connectAsyncEvent;
-
 		/// True exactly when the recv_completion has been submitted to the IO abstraction
 		/// but the callback has not yet been run.
 		private bool recvSubmitted = false;
@@ -48,9 +42,6 @@ namespace TigerBeetle.Protocol
 		/// True if we have already checked the header checksum of the message we
 		/// are currently receiving/parsing.
 		private bool recvCheckedHeader = false;
-
-		/// This completion is used for all send operations.
-		private readonly SocketAsyncEventArgs sendAsyncEvent;
 
 		/// True exactly when the send_completion has been submitted to the IO abstraction
 		/// but the callback has not yet been run.
@@ -69,15 +60,6 @@ namespace TigerBeetle.Protocol
 
 		public Connection()
 		{
-			connectAsyncEvent = new SocketAsyncEventArgs();
-			connectAsyncEvent.Completed += (sender, e) => OnConnectResult(e);
-
-			recvAsyncEvent = new SocketAsyncEventArgs();
-			recvAsyncEvent.Completed += (sender, e) => OnRecvResult(e, asyncCall: true);
-
-			sendAsyncEvent = new SocketAsyncEventArgs();
-			sendAsyncEvent.Completed += (sender, e) => OnSendResult(e, asyncCall: true);
-
 			sendQueue = new Queue<Message>(Config.ConnectionSendQueueMax);
 		}
 
@@ -107,10 +89,12 @@ namespace TigerBeetle.Protocol
 			var family = bus.Configuration[0].AddressFamily;
 
 			socket = new Socket(family, SocketType.Stream, ProtocolType.Tcp);
-			//if (Config.TcpRcvbuf > 0) socket.ReceiveBufferSize = Config.TcpRcvbuf;
-			//if (Config.TcpSndbuf > 0) socket.SendBufferSize = Config.TcpSndbuf;
-			//if (Config.TcpKeepalive) socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, Config.TcpKeepalive);
+			if (Config.TcpRcvbuf > 0) socket.ReceiveBufferSize = Config.TcpRcvbuf;
+			if (Config.TcpSndbuf > 0) socket.SendBufferSize = Config.TcpSndbuf;
+			if (Config.TcpKeepalive) socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, Config.TcpKeepalive);
 			if (Config.TcpNodelay) socket.NoDelay = Config.TcpNodelay;
+
+			socket.UseOnlyOverlappedIO = true;
 
 			peer = ConnectionPeer.Replica;
 			this.replica = replica;
@@ -160,15 +144,7 @@ namespace TigerBeetle.Protocol
 			recvSubmitted = true;
 
 			var address = bus.Configuration[replica];
-
-			connectAsyncEvent.RemoteEndPoint = address;
-			connectAsyncEvent.UserToken = bus;
-
-			var asyncCall = socket.ConnectAsync(connectAsyncEvent);
-			if (!asyncCall)
-			{
-				OnConnectResult(connectAsyncEvent);
-			}
+			bus.io.Connect(socket, OnConnectResult, bus, address);
 		}
 
 		private void OnConnectResult(SocketAsyncEventArgs e)
@@ -192,8 +168,7 @@ namespace TigerBeetle.Protocol
 				Trace.TraceInformation($"error connecting to replica {replica}: {e.SocketError}");
 				Terminate(bus, shutdown: false);
 				return;
-			};
-
+			}
 
 			Trace.TraceInformation($"connected to replica {replica}");
 			bus.ReplicasConnectAttempts[replica] = 0;
@@ -201,7 +176,7 @@ namespace TigerBeetle.Protocol
 			AssertRecvSendInitialState(bus);
 
 			// This will terminate the connection if there are no messages available:
-			GetRecvMessageAndRecv(bus, asyncCall: true);
+			GetRecvMessageAndRecv(bus);
 
 			// A message may have been queued for sending while we were connecting:
 			// TODO Should we relax recv() and send() to return if `connection.state != .connected`?
@@ -226,11 +201,11 @@ namespace TigerBeetle.Protocol
 			Trace.Assert(sendProgress == 0);
 		}
 
-		private void GetRecvMessageAndRecv(MessageBus bus, bool asyncCall)
+		private void GetRecvMessageAndRecv(MessageBus bus)
 		{
 			if (recvMessage != null && recvParsed == 0)
 			{
-				if (asyncCall) Recv(bus);
+				Recv(bus);
 				return;
 			}
 
@@ -272,7 +247,7 @@ namespace TigerBeetle.Protocol
 				}
 
 				recvMessage = newMessage.Ref();
-				if (asyncCall) Recv(bus);
+				Recv(bus);
 			}
 			finally
 			{
@@ -282,8 +257,6 @@ namespace TigerBeetle.Protocol
 
 		private void Recv(MessageBus bus)
 		{
-		syncCall:
-
 			Trace.Assert(peer != ConnectionPeer.None);
 			Trace.Assert(state == ConnectionState.Connected);
 			Trace.Assert(socket != null);
@@ -294,20 +267,11 @@ namespace TigerBeetle.Protocol
 			Trace.Assert(recvProgress < Config.MessageSizeMax);
 			Trace.Assert(recvMessage != null);
 
-			recvAsyncEvent.UserToken = bus;
-			recvAsyncEvent.SetBuffer(recvMessage.Buffer.AsMemory(recvProgress..Config.MessageSizeMax));
-			var asyncCall = socket.ReceiveAsync(recvAsyncEvent);
-
-			if (!asyncCall)
-			{
-				//if the operation completes synchronously, 
-				//avoid stackoverflow by calling recursive
-				OnRecvResult(recvAsyncEvent, asyncCall: false);
-				goto syncCall;
-			}
+			var buffer = recvMessage.Buffer.AsMemory(recvProgress..Config.MessageSizeMax);
+			bus.io.Receive(socket, OnRecvResult, bus, buffer);
 		}
 
-		private void OnRecvResult(SocketAsyncEventArgs e, bool asyncCall)
+		private void OnRecvResult(SocketAsyncEventArgs e)
 		{
 			Trace.Assert(recvSubmitted);
 			recvSubmitted = false;
@@ -335,16 +299,16 @@ namespace TigerBeetle.Protocol
 			// No bytes received means that the peer closed its side of the connection.
 			if (bytesReceived == 0)
 			{
-				Trace.TraceInformation($"peer performed an orderly shutdown: {replica}");
-				Terminate(bus, shutdown: false);
+				//Trace.TraceInformation($"peer performed an orderly shutdown: {replica}");
+				//Terminate(bus, shutdown: false);
 				return;
 			}
 
 			recvProgress += bytesReceived;
-			ParseMessages(bus, asyncCall);
+			ParseMessages(bus);
 		}
 
-		private void ParseMessages(MessageBus bus, bool asyncCall)
+		private void ParseMessages(MessageBus bus)
 		{
 			Trace.Assert(peer != ConnectionPeer.None);
 			Trace.Assert(state == ConnectionState.Connected);
@@ -352,14 +316,14 @@ namespace TigerBeetle.Protocol
 
 			for (; ; )
 			{
-				var message = ParseMessage(bus, asyncCall);
+				var message = ParseMessage(bus);
 				if (message == null) break;
 
 				OnMessage(bus, message);
 			}
 		}
 
-		private Message? ParseMessage(MessageBus bus, bool asyncCall)
+		private Message? ParseMessage(MessageBus bus)
 		{
 			Trace.Assert(recvMessage != null);
 
@@ -367,7 +331,7 @@ namespace TigerBeetle.Protocol
 
 			if (data.Length < HeaderData.SIZE)
 			{
-				GetRecvMessageAndRecv(bus, asyncCall);
+				GetRecvMessageAndRecv(bus);
 				return null;
 			}
 
@@ -401,7 +365,7 @@ namespace TigerBeetle.Protocol
 
 			if (data.Length < header.Size)
 			{
-				GetRecvMessageAndRecv(bus, asyncCall);
+				GetRecvMessageAndRecv(bus);
 				return null;
 			}
 
@@ -510,8 +474,6 @@ namespace TigerBeetle.Protocol
 
 		private void Send(MessageBus bus)
 		{
-		syncCall:
-
 			Trace.Assert(peer == ConnectionPeer.Client || peer == ConnectionPeer.Replica);
 			Trace.Assert(state == ConnectionState.Connected);
 			Trace.Assert(socket != null);
@@ -522,21 +484,11 @@ namespace TigerBeetle.Protocol
 			Trace.Assert(!sendSubmitted);
 			sendSubmitted = true;
 
-			sendAsyncEvent.SetBuffer(message.Buffer.AsMemory(sendProgress..message.Header.Size));
-			sendAsyncEvent.UserToken = bus;
-
-			var asyncCall = socket.SendAsync(sendAsyncEvent);
-
-			if (!asyncCall)
-			{
-				// if the operation completes synchronously, 
-				// avoid stackoverflow by calling recursive
-				OnSendResult(sendAsyncEvent, asyncCall: false);
-				goto syncCall;
-			}
+			var buffer = message.Buffer.AsMemory(sendProgress..message.Header.Size);
+			bus.io.Send(socket, OnSendResult, bus, buffer);
 		}
 
-		private void OnSendResult(SocketAsyncEventArgs e, bool asyncCall)
+		private void OnSendResult(SocketAsyncEventArgs e)
 		{
 			Trace.Assert(socket != null);
 
@@ -578,7 +530,7 @@ namespace TigerBeetle.Protocol
 				bus.Unref(message);
 			}
 
-			if (asyncCall) Send(bus);
+			Send(bus);
 		}
 
 		/// Clean up an active connection and reset it to its initial, unused, state.
@@ -654,7 +606,7 @@ namespace TigerBeetle.Protocol
 			{
 				// It's OK to use the send completion here as we know that no send
 				// operation is currently in progress.
-				socket.Shutdown(SocketShutdown.Both);
+				socket.Close();
 				OnCloseResult(bus);
 			}
 			finally

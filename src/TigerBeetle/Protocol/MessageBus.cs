@@ -8,6 +8,8 @@ namespace TigerBeetle.Protocol
 	{
 		#region Fields
 
+		internal readonly IO io;
+
 		private readonly MessagePool pool;
 
 		private readonly uint cluster;
@@ -76,6 +78,7 @@ namespace TigerBeetle.Protocol
 			this.prng = prgn;
 
 			this.messageReceivedCallback = messageReceivedCallback;
+			this.io = new IO();
 		}
 
 		#endregion Constructor
