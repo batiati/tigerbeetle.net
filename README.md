@@ -18,9 +18,19 @@ Watch an introduction to TigerBeetle on [Zig SHOWTIME](https://www.youtube.com/w
 
 - Learn more about new features introduced in dotNet, like slices, ranges, and buffers.
 
-## Performance
+# Native client
 
-This C# implementation is based on the same principles regarding performance and memory efficiency adopted by TigerBeetle. In many places, this C# version is just a line-by-line port of the Zig code. 
+This project offers two client backends: **native** or **managed**.
+
+The **native client backend** is a library binding to the original [client.zig](https://github.com/coilhq/tigerbeetle/blob/main/src/vsr/client.zig) implementation. It shows pair performance with the Zig benchmark, without additional memory copies or marshaling overhead.
+
+See the experimental [libtigerbeetle implementation](src/libtigerbeetle/src/lib.zig) for more details about the binding interface.
+
+# Managed client
+
+The **managed client backend** is a pure C# implementation based on the same principles regarding performance and memory efficiency adopted by TigerBeetle. In many places, this C# version is just a line-by-line port of the Zig code. 
+
+### Managed client performance
 
 ### 1. One million transactions, 5.000 per batch
 
@@ -79,13 +89,16 @@ The profiler shows most of the time spent on waiting for IO operations.
 
 TigerBeetle uses `io_uring`, and we use whatever the DotNet SDK implementation does. [Maybe in future releases, DotNet will support `io_uring`](https://github.com/dotnet/runtime/issues/51985)
 
-## Windows and old Linuxes
+### 5. Windows and old Linuxes
 
-This implementation does not depend on native code, and it can run on Windows and old Linux distributions.
+It can run on environments where native code isn't compatible or allowed.
+The managed client does not depend on native code, and it can run on Windows and old Linux distributions.
 
 ## TODO List
 
-- [ ] Error handling and reconnection
+- [ ] Benchmarks scripts.
+- [ ] Build and embeed the native library.
+- [ ] Error handling and reconnection for the managed client.
 - [ ] More tests
 - [ ] Code cleanup
 
