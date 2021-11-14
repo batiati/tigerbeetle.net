@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Net;
-using System.Net.Sockets;
 
 namespace TigerBeetle.Protocol
 {
@@ -92,13 +91,10 @@ namespace TigerBeetle.Protocol
 
 		public void Tick()
 		{
-			//io.Tick();
-
 			// The client connects to all replicas.
 			for (byte replica = 0; replica < replicas.Length; replica++)
 			{
 				MaybeConnectToReplica(replica);
-				//io.Tick();
 			}
 		}
 

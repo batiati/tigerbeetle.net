@@ -26,7 +26,7 @@ namespace TigerBeetle.Protocol
 
 		public byte Attempts { get => attempts; }
 
-		public bool Ticking { get => ticking;  }
+		public bool Ticking { get => ticking; }
 
 		public static ulong ExponentialBackoffWithJitter(Random prng, ulong min, ulong max, ulong attempt)
 		{

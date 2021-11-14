@@ -1,152 +1,268 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Net.Sockets;
 using System.Diagnostics;
-using System.Threading.Tasks;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 
 namespace TigerBeetle.Protocol
 {
-	public sealed class IO
+	internal sealed class IO
 	{
-		private readonly LinkedList<Operation> pool = new LinkedList<Operation>();
-		private readonly LinkedList<Operation> submited = new LinkedList<Operation>();
-		private readonly LinkedList<Operation> completed = new LinkedList<Operation>();
+		#region InnerTypes
 
-		public enum IOOperation
+		private sealed class CompletionEventArgs : SocketAsyncEventArgs
 		{
-			None,
-			Connect,
-			Read,
-			Write,
-			Timeout,
+			#region Fields
+
+			private readonly ManualResetEventSlim ev = new();
+
+			#endregion Fields
+
+			#region Properties
+
+			public WaitHandle WaitHandle => ev.WaitHandle;
+
+			public bool IsCompleted => ev.IsSet;
+
+			#endregion Properties
+
+			#region Methods
+
+			public void Reset()
+			{
+				ev.Reset();
+			}
+
+			public void SyncSet()
+			{
+				ev.Set();
+			}
+
+			protected override void OnCompleted(SocketAsyncEventArgs e)
+			{
+				ev.Set();
+			}
+
+			#endregion Methods
 		}
 
-		public class Operation 
+		private sealed class Completion
 		{
-			public IOOperation IOOperation { get; private set; }
+			#region Fields
 
-			private NetworkStream? stream;
-			private Action<object?>? objectCallback;
-			private Action<int, object?>? intObjectCallback;
-			private IAsyncResult? asyncResult;
-			private object? asyncState;
+			private SocketAsyncOperation asyncOperation;
+			private Socket? socket;
+			private Action<SocketAsyncEventArgs>? callback;
+			private readonly CompletionEventArgs e = new();
 
-			public void Write(Socket socket, byte[] buffer, int offset, int size, Action<object?> action, object? asyncState)
+			#endregion Fields
+
+			public SocketAsyncOperation AsyncOperation => asyncOperation;
+
+			public WaitHandle WaitHandle => e.WaitHandle;
+
+			public bool IsCompleted => e.IsCompleted;
+
+			public void Submit(Socket socket, SocketAsyncOperation asyncOperation, Action<SocketAsyncEventArgs> callback, object? asyncState, Memory<byte> buffer = default, IPEndPoint? address = null)
 			{
-				IOOperation = IOOperation.Write;
+				Trace.Assert(this.socket == null);
+				if (socket == null) throw new NullReferenceException();
 
-				this.objectCallback = action;
-				this.intObjectCallback = null;
-				this.asyncState = asyncState;
-				
-				stream = new NetworkStream(socket, ownsSocket: false);
-				asyncResult = stream.BeginWrite(buffer, offset, size, null, null);
-			}
+				this.socket = socket;
+				this.asyncOperation = asyncOperation;
+				this.callback = callback;
 
-			public void Read(Socket socket, byte[] buffer, int offset, int size, Action<int, object?> action, object? asyncState)
-			{
-				IOOperation = IOOperation.Read;
+				e.UserToken = asyncState;
+				e.RemoteEndPoint = address;
+				e.SetBuffer(buffer);
 
-				intObjectCallback = action;
-				objectCallback = null;
-				this.asyncState = asyncState;
+				bool pending;
 
-				stream = new NetworkStream(socket, ownsSocket: false);
-				asyncResult = stream.BeginRead(buffer, offset, size, null, null);
-			}
-
-			public bool Flush()
-			{
-				if (asyncResult != null && asyncResult.IsCompleted)
+				switch (asyncOperation)
 				{
-					switch (IOOperation)
-					{
-						case IOOperation.Read:
+					case SocketAsyncOperation.Connect:
+						pending = socket.ConnectAsync(e);
+						break;
 
-							Trace.Assert(intObjectCallback != null);
-							var result = stream.EndRead(asyncResult);
-							intObjectCallback(result, asyncState);
-							break;
+					case SocketAsyncOperation.Send:
+						pending = socket.SendAsync(e);
+						break;
 
-						case IOOperation.Write:
+					case SocketAsyncOperation.Receive:
+						pending = socket.ReceiveAsync(e);
+						break;
 
-							Trace.Assert(objectCallback != null);
-
-							stream.EndWrite(asyncResult);
-							objectCallback(asyncState);
-							break;
-						
-						default:
-							throw new NotImplementedException();
-					}
-
-					stream.Dispose();
-					stream = null;
-
-					IOOperation = IOOperation.None;
-					intObjectCallback = null;
-					objectCallback = null;
-					asyncResult = null;
-					asyncState = null;
-
-					return true;
+					default:
+						throw new NotImplementedException();
 				}
 
-				return false;
+				if (!pending) e.SyncSet();
+			}
+
+			public void Complete()
+			{
+				if (callback == null) throw new NullReferenceException();
+
+				callback(e);
+
+				asyncOperation = SocketAsyncOperation.None;
+				socket = null;
+				callback = null;
+				e.RemoteEndPoint = null;
+				e.SetBuffer(default);
+				e.Reset();
 			}
 		}
+
+		#endregion InnerTypes
+
+		#region Fields
+
+		private const int POOL_SIZE = 128;
+		private const int MAX_HAIT_HANDLES = 64 - 1;
+
+		private readonly LinkedList<Completion> pool = new();
+		private readonly LinkedList<Completion> submited = new();
+		private readonly LinkedList<Completion> completed = new();
+
+		private ManualResetEventSlim submitedEvent;
+		private WaitHandle[][] waitHandlesPool;
+
+
+		public void SetSubmissionWaitHandle(ManualResetEventSlim ev)
+		{
+			this.submitedEvent = ev;
+			waitHandlesPool = new WaitHandle[MAX_HAIT_HANDLES][];
+
+			for (int i = 0; i < MAX_HAIT_HANDLES; i++)
+			{
+				waitHandlesPool[i] = new WaitHandle[i + 1];
+				waitHandlesPool[i][0] = ev.WaitHandle;
+			}
+		}
+
+		#endregion Fields
+
+		#region Constructor
 
 		public IO()
 		{
-			for (int i = 0; i < 1024; i++)
+			for (int i = 0; i < POOL_SIZE; i++)
 			{
-				pool.AddLast(new Operation());
+				pool.AddLast(new Completion());
 			}
 		}
 
-		public void Write(Socket socket, byte[] buffer, int offset, int size, Action<object?> action, object asyncState)
-		{
-			var op = GetOperation();
-			op.Write(socket, buffer, offset, size, action, asyncState);
+		#endregion Constructor
 
-			submited.AddLast(op);
+		#region Methods
+
+		public void Connect(Socket socket, Action<SocketAsyncEventArgs> callback, object asyncState, IPEndPoint address)
+		{
+			Enqueue(socket, SocketAsyncOperation.Connect, callback, asyncState, default, address);
 		}
 
-		public void Read(Socket socket, byte[] buffer, int offset, int size, Action<int, object?> action, object asyncState)
+		public void Send(Socket socket, Action<SocketAsyncEventArgs> callback, object asyncState, Memory<byte> buffer)
 		{
-			var op = GetOperation();
-			op.Read(socket, buffer, offset, size, action, asyncState);
-
-			submited.AddLast(op);
+			Enqueue(socket, SocketAsyncOperation.Send, callback, asyncState, buffer);
 		}
 
-		private Operation GetOperation()
+		public void Receive(Socket socket, Action<SocketAsyncEventArgs> callback, object asyncState, Memory<byte> buffer)
 		{
-			var first = pool.First.Value;
-			pool.RemoveFirst();
+			Enqueue(socket, SocketAsyncOperation.Receive, callback, asyncState, buffer);
+		}
 
-			return first;
+		private void Enqueue(Socket socket, SocketAsyncOperation operation, Action<SocketAsyncEventArgs> callback, object? asyncState, Memory<byte> buffer = default, IPEndPoint? address = null)
+		{
+			var completion = Get();
+			completion.Submit(socket, operation, callback, asyncState, buffer, address);
+			submited.AddLast(completion);
 		}
 
 		public void Tick()
 		{
-			if (submited.Count == 0) return;
+			CheckSubmited();
+			FlushCompleted();
+		}
 
+		public void RunFor(int ms)
+		{
+			var now = DateTime.Now;
+
+			var waitHandles = GetWaitHandles();
+			WaitHandle.WaitAny(waitHandles, ms, exitContext: false);
+			submitedEvent.Reset();
+		}
+
+		private WaitHandle[] GetWaitHandles()
+		{
+			var handleIndex = submited.Count < waitHandlesPool.Length ? submited.Count : waitHandlesPool.Length - 1;
+			var waitHandles = waitHandlesPool[handleIndex];
+
+			if (submited.Count > 0)
+			{
+				int i = 1;
+				var node = submited.First;
+				while (node != null)
+				{
+					waitHandles[i] = node.Value.WaitHandle;
+					i += 1;
+
+					if (i == waitHandles.Length) break;
+					node = node.Next;
+				}
+			}
+
+			return waitHandles;
+		}
+
+		private void CheckSubmited()
+		{
 			var node = submited.First;
 			for (; ; )
 			{
-				if (node.Value.Flush())
+				if (node == null) break;
+
+				if (node.Value.IsCompleted)
 				{
-					pool.AddLast(node.Value);
+					submited.Remove(node);
+					completed.AddLast(node.Value);
 				}
 
 				node = node.Next;
-				if (node == null) break;
 			}
 		}
 
+		private void FlushCompleted()
+		{
+			var node = completed.First;
+			for (; ; )
+			{
+				if (node == null) break;
+
+				completed.RemoveFirst();
+				node.Value.Complete();
+
+				Return(node.Value);
+
+				node = node.Next;
+			}
+		}
+
+		private Completion Get()
+		{
+			var first = pool.First;
+			pool.RemoveFirst();
+			return first.Value;
+		}
+
+		private void Return(Completion completion)
+		{
+			pool.AddLast(completion);
+		}
+
+		#endregion Methods
 
 	}
 }
