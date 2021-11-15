@@ -1,6 +1,6 @@
 # TigerBeetle.Net
 
-A pure C# client for [TigerBeetle](https://github.com/coilhq/tigerbeetle)
+A C# client for [TigerBeetle](https://github.com/coilhq/tigerbeetle)
 
 **[Compatible with .Net Standard 2.1](https://docs.microsoft.com/en-us/dotnet/standard/net-standard)**
 
@@ -30,11 +30,38 @@ See the experimental [libtigerbeetle implementation](src/libtigerbeetle/src/lib.
 
 The **managed client backend** is a pure C# implementation based on the same principles regarding performance and memory efficiency adopted by TigerBeetle. In many places, this C# version is just a line-by-line port of the Zig code. 
 
-### Managed client performance
+# Benchmarking
+
+1. Install [Zig](https://ziglang.org/)
+
+
+> ```bash
+> $ scripts/install_zig.sh
+> ```
+
+2. Install [DotNet](https://docs.microsoft.com/en-us/dotnet/)
+
+> ```
+> $ scripts/install_dotnet.sh
+> ```
+
+3. Run the `benchmark.sh` script passing `zig`, `native` or `managed` as argument to run each version.
+
+> ```bash
+> $ scripts/benchmark.sh native
+> ```
+
+... Or run the full benchmark to run all three versions in a row.
+
+
+> ```bash
+> $ scripts/full_benchmark.sh
+> ```
+
 
 ### 1. One million transactions, 5.000 per batch
 
-Currently, the C# benchmark runs ~40% slower than the Zig implementation, using the default parameters.
+Currently, the managed client runs about to ~40% slower than the native client, using the default parameters.
 
 ```
 MAX_TRANSFERS = 1_000_000;
@@ -42,11 +69,13 @@ IS_TWO_PHASE_COMMIT = false;
 BATCH_SIZE = 5_000;
 ```
 
-Zig
+Zig original benchmark
 > ![5000 batches in zig](./assets/5000_zig.JPG)
 
-C#
+C# native client
 > ![5000 in C#](./assets/5000_dotnet.JPG)
+
+C# managed client
 
 
 ### 2. Half million transactions, 1.000 per batch

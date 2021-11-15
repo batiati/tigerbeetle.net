@@ -1,3 +1,7 @@
+zig/
+dotnet/
+cluster_*_replica_*.tigerbeetle
+*.log
 src/.vs
 src/TigerBeetle/obj
 src/TigerBeetle/bin
@@ -6,3 +10,5 @@ src/TigerBeetle.Benchmarks/bin
 src/TigerBeetle.Benchmarks/Properties/PublishProfiles
 src/TigerBeetle.Tests/obj
 src/TigerBeetle.Tests/bin
+
+
