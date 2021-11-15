@@ -10,7 +10,7 @@ using TigerBeetle.Managed;
 
 namespace TigerBeetle.Native
 {
-	internal sealed class NativeClientImpl : IClientImpl
+	internal sealed class NativeClientImpl : IClientImpl, IDisposable
 	{
 		#region InnerTypes
 
@@ -60,7 +60,7 @@ namespace TigerBeetle.Native
 
 		#region Fields
 
-		private readonly IntPtr handle;
+		private IntPtr handle;
 		private readonly UInt128 id;
 		private readonly uint cluster;
 		private readonly Thread tickTimer;
@@ -89,7 +89,7 @@ namespace TigerBeetle.Native
 			NativeResult ret;
 
 			ret = PInvoke.TB_Init();
-			CheckResult(ret);
+			if (ret != NativeResult.SUCCESS && ret != NativeResult.ALREADY_INITIALIZED) CheckResult(ret);
 
 			ret = PInvoke.TB_CreateClient(id, cluster, addresses_raw, ref handle);
 			CheckResult(ret);
@@ -179,6 +179,7 @@ namespace TigerBeetle.Native
 			catch
 			{
 				if (message.handle != IntPtr.Zero) PInvoke.TB_UnrefMessage(handle, message.handle);
+				throw;
 			}
 
 			var ret = PInvoke.TB_Request(handle, (byte)operation, message.handle, size, callback);
@@ -214,6 +215,17 @@ namespace TigerBeetle.Native
 				{
 					break;
 				}
+			}
+		}
+
+		public void Dispose()
+		{
+			if (handle != IntPtr.Zero)
+			{
+				tickTimer.Abort();
+
+				_ = PInvoke.TB_DestroyClient(handle);
+				handle = IntPtr.Zero;
 			}
 		}
 

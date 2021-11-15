@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace TigerBeetle.Managed
 {
-	internal sealed class Connection
+	internal sealed class Connection : IDisposable
 	{
 		#region Fields
 
@@ -659,6 +659,14 @@ namespace TigerBeetle.Managed
 			recvCheckedHeader = default;
 			sendSubmitted = default;
 			sendProgress = default;
+		}
+
+		public void Dispose()
+		{
+			if (socket != null)
+			{
+				socket.Dispose();
+			}
 		}
 
 		#endregion Methods

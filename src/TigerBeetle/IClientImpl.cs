@@ -1,10 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using TigerBeetle.Managed;
 
 namespace TigerBeetle
 {
-	internal interface IClientImpl
+	internal interface IClientImpl : IDisposable
 	{
 		#region Properties
 

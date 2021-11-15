@@ -4,7 +4,7 @@ using System.Net;
 
 namespace TigerBeetle.Managed
 {
-	internal sealed class MessageBus
+	internal sealed class MessageBus : IDisposable
 	{
 		#region Fields
 
@@ -144,6 +144,14 @@ namespace TigerBeetle.Managed
 		public void Unref(Message message) => pool.Unref(message);
 
 		public void OnMessage(Message message) => messageReceivedCallback(message);
+
+		public void Dispose()
+		{
+			foreach (var connection in connections)
+			{
+				connection.Dispose();
+			}
+		}
 
 		#endregion Methods
 	}

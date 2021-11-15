@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace TigerBeetle
 {
-	public sealed class Client
+	public sealed class Client : IDisposable
 	{
 		#region Fields
 
@@ -28,13 +28,22 @@ namespace TigerBeetle
 			};
 		}
 
+		~Client()
+		{
+			Dispose(disposing: false);
+		}
+
 		#endregion Constructor
+
+		#region Properties
 
 		public UInt128 Id => impl.Id;
 
 		public uint Cluster => impl.Cluster;
 
 		public ClientType ClientType => impl is Native.NativeClientImpl ? ClientType.Native : ClientType.Managed;
+
+		#endregion Properties
 
 		#region Methods
 
@@ -141,6 +150,17 @@ namespace TigerBeetle
 			where TResult : struct
 		{
 			return impl.CallRequestAsync<TResult, TBody>(operation, batch);
+		}
+
+		public void Dispose()
+		{
+			Dispose(disposing: true);
+		}
+
+		private void Dispose(bool disposing)
+		{
+			if (disposing) GC.SuppressFinalize(this);
+			impl.Dispose();
 		}
 
 		#endregion Methods

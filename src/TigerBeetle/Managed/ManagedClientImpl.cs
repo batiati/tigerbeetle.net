@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace TigerBeetle.Managed
 {
-	internal sealed class ManagedClientImpl : IClientImpl
+	internal sealed class ManagedClientImpl : IClientImpl, IDisposable
 	{
 		#region InnerTypes
 
@@ -76,7 +76,6 @@ namespace TigerBeetle.Managed
 		/// We therefore queue any further concurrent requests made by the application layer.
 		/// We must leave one message free to receive with.
 		private readonly Queue<RequestData> requestQueue;
-		private readonly ManualResetEventSlim requestQueueEvent = new();
 
 		#endregion Fields
 
@@ -273,7 +272,6 @@ namespace TigerBeetle.Managed
 				if (wasEmpty)
 				{
 					SendRequestForTheFirstTime(message);
-					requestQueueEvent.Set();
 				}
 			}
 			finally
@@ -556,6 +554,12 @@ namespace TigerBeetle.Managed
 					break;
 				}
 			}
+		}
+
+		public void Dispose()
+		{
+			tickTimer.Abort();
+			bus.Dispose();
 		}
 
 		#endregion Methods

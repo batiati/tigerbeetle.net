@@ -90,7 +90,7 @@ namespace TigerBeetle.Benchmarks
 			Console.WriteLine($"Benchmarking.Net ... {clientType}");
 
 			var queue = new TimedQueue();
-			var client = new Client(clientType, 0, new IPEndPoint[] { IPEndPoint.Parse("127.0.0.1:3001") });
+			using var client = new Client(clientType, 0, new IPEndPoint[] { IPEndPoint.Parse("127.0.0.1:3001") });
 			
 			WaitForConnect();
 
@@ -155,7 +155,11 @@ namespace TigerBeetle.Benchmarks
 				var batch = transfers.Skip(batchCount * BATCH_SIZE).Take(BATCH_SIZE);
 				if (batch.Count() == 0) break;
 
-				async Task createTransfers() => _ = await client.CreateTransfersAsync(batch);
+				async Task createTransfers()
+				{
+					var ret = await client.CreateTransfersAsync(batch);
+					if (ret.Length > 0) throw new Exception("Invalid transfer results");
+				}
 
 				queue.Batches.Enqueue((createTransfers, false));
 
@@ -164,7 +168,11 @@ namespace TigerBeetle.Benchmarks
 					#pragma warning disable CS0162 // Unreachable code detected
 					
 					var commitBatch = commits.Skip(batchCount * BATCH_SIZE).Take(BATCH_SIZE);
-					async Task commitTransfers() => _ = await client.CommitTransfersAsync(commitBatch);
+					async Task commitTransfers()
+					{
+						var ret = await client.CommitTransfersAsync(commitBatch);
+						if (ret.Length > 0) throw new Exception("Invalid commit results");
+					}
 					queue.Batches.Enqueue((commitTransfers, true));
 
 					#pragma warning restore CS0162
@@ -191,10 +199,7 @@ namespace TigerBeetle.Benchmarks
 
 		private static void WaitForConnect()
 		{
-			for (int i = 0; i < 20; i++)
-			{
-				System.Threading.Thread.Sleep(5);
-			}
+			System.Threading.Thread.Sleep(100);
 		}
 
 		#endregion Methods
