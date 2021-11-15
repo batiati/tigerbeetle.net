@@ -206,17 +206,10 @@ namespace TigerBeetle.Native
 
 		private void OnTick(object _)
 		{
-			while(isTicking)
+			while (isTicking)
 			{
-				try
-				{
-					PInvoke.TB_Tick(handle);
-					PInvoke.TB_RunFor(handle, (int)Config.TickMs);
-				}
-				catch (ThreadAbortException)
-				{
-					break;
-				}
+				PInvoke.TB_Tick(handle);
+				PInvoke.TB_RunFor(handle, (int)Config.TickMs);
 			}
 		}
 
@@ -225,7 +218,6 @@ namespace TigerBeetle.Native
 			if (handle != IntPtr.Zero)
 			{
 				isTicking = false;
-				tickTimer.Join();
 
 				_ = PInvoke.TB_DestroyClient(handle);
 				handle = IntPtr.Zero;

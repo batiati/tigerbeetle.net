@@ -541,26 +541,18 @@ namespace TigerBeetle.Managed
 
 		private void OnTick(object _)
 		{
-			while(isTicking)
+			while (isTicking)
 			{
-				try
-				{
-					Tick();
+				Tick();
 
-					bus.io.Tick();
-					bus.io.RunFor((int)Config.TickMs);
-				}
-				catch (ThreadAbortException)
-				{
-					break;
-				}
+				bus.io.Tick();
+				bus.io.RunFor((int)Config.TickMs);
 			}
 		}
 
 		public void Dispose()
 		{
 			isTicking = false;
-			tickTimer.Join();
 			bus.Dispose();
 		}
 
