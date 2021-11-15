@@ -25,8 +25,8 @@ namespace TigerBeetle.Managed
 
 		#region Fields
 
-
 		private readonly Thread tickTimer;
+		private bool isTicking;
 
 		private readonly MessageBus bus;
 
@@ -108,6 +108,7 @@ namespace TigerBeetle.Managed
 
 			tickTimer = new Thread(OnTick);
 			tickTimer.IsBackground = true;
+			isTicking = true;
 			tickTimer.Start();
 		}
 
@@ -540,7 +541,7 @@ namespace TigerBeetle.Managed
 
 		private void OnTick(object _)
 		{
-			for (; ; )
+			while(isTicking)
 			{
 				try
 				{
@@ -558,7 +559,8 @@ namespace TigerBeetle.Managed
 
 		public void Dispose()
 		{
-			tickTimer.Abort();
+			isTicking = false;
+			tickTimer.Join();
 			bus.Dispose();
 		}
 

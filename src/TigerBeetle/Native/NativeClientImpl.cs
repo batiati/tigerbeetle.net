@@ -64,6 +64,7 @@ namespace TigerBeetle.Native
 		private readonly UInt128 id;
 		private readonly uint cluster;
 		private readonly Thread tickTimer;
+		private bool isTicking;
 
 		#endregion Fields
 
@@ -96,6 +97,7 @@ namespace TigerBeetle.Native
 
 			tickTimer = new Thread(OnTick);
 			tickTimer.IsBackground = true;
+			isTicking = true;
 			tickTimer.Start();
 		}
 
@@ -204,7 +206,7 @@ namespace TigerBeetle.Native
 
 		private void OnTick(object _)
 		{
-			for (; ; )
+			while(isTicking)
 			{
 				try
 				{
@@ -222,7 +224,8 @@ namespace TigerBeetle.Native
 		{
 			if (handle != IntPtr.Zero)
 			{
-				tickTimer.Abort();
+				isTicking = false;
+				tickTimer.Join();
 
 				_ = PInvoke.TB_DestroyClient(handle);
 				handle = IntPtr.Zero;
