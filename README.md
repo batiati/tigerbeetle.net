@@ -18,19 +18,18 @@ Watch an introduction to TigerBeetle on [Zig SHOWTIME](https://www.youtube.com/w
 
 - Learn more about new features introduced in dotNet, like slices, ranges, and buffers.
 
-# Native client
+# Native and managed client
 
 This project offers two client backends: **native** or **managed**.
 
-The **native client backend** is a library binding to the original [client.zig](https://github.com/coilhq/tigerbeetle/blob/main/src/vsr/client.zig) implementation. It shows pair performance with the Zig benchmark, without additional memory copies or marshaling overhead.
+- The **native client backend** is a library binding to the original [client.zig](https://github.com/coilhq/tigerbeetle/blob/main/src/vsr/client.zig) implementation. It shows pair performance with the Zig benchmark, without additional memory copies or marshaling overhead.
 
 See the experimental [libtigerbeetle implementation](src/libtigerbeetle/src/lib.zig) for more details about the binding interface.
 
-# Managed client
 
-The **managed client backend** is a pure C# implementation based on the same principles regarding performance and memory efficiency adopted by TigerBeetle. In many places, this C# version is just a line-by-line port of the Zig code. 
+- The **managed client backend** is a pure C# implementation based on the same principles regarding performance and memory efficiency adopted by TigerBeetle. In many places, this C# version is just a line-by-line port of the Zig code. 
 
-# Benchmarking
+# Installing
 
 1. Clone this repo
 
@@ -57,18 +56,21 @@ The **managed client backend** is a pure C# implementation based on the same pri
 > $ scripts/install_dotnet.sh
 > ```
 
-5. Run the `benchmark.sh` script passing `zig`, `native` or `managed` as argument to run each version.
+# Benchmarking
 
-> ```bash
-> $ scripts/benchmark.sh native
-> ```
-
-... Or run the full benchmark to run all three versions in a row.
+Run the `benchmark.sh` script passing `zig`, `native` or `managed` as argument to run each version of the benchmark.
 
 
-> ```bash
-> $ scripts/full_benchmark.sh
-> ```
+```bash
+$ scripts/benchmark.sh native
+```
+
+Or run the full benchmark to run all three versions in a row.
+
+
+```bash
+$ scripts/full_benchmark.sh
+```
 
 ### 1. One million transactions, 5.000 per batch
 
@@ -88,10 +90,9 @@ C# native client
 
 C# managed client
 
-
 ### 2. Half million transactions, 1.000 per batch
 
-The C# version performs better with smaller batches.
+The managed client performs better with smaller batches.
 
 ```
 MAX_TRANSFERS = 500_000;

@@ -5,6 +5,7 @@ cluster_*_replica_*.tigerbeetle
 src/.vs
 src/TigerBeetle/obj
 src/TigerBeetle/bin
+src/TigerBeetle/Native/runtimes/**/*.o
 src/TigerBeetle.Benchmarks/obj
 src/TigerBeetle.Benchmarks/bin
 src/TigerBeetle.Benchmarks/Properties/PublishProfiles
