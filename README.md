@@ -72,6 +72,8 @@ Or run the full benchmark to run all three versions in a row.
 $ scripts/full_benchmark.sh
 ```
 
+> # **TODO:** Add updated benchmarks results
+
 ### 1. One million transactions, 5.000 per batch
 
 Currently, the managed client runs about to ~40% slower than the native client, using the default parameters.
@@ -85,10 +87,8 @@ BATCH_SIZE = 5_000;
 Zig original benchmark
 > ![5000 batches in zig](./assets/5000_zig.JPG)
 
-C# native client
-> ![5000 in C#](./assets/5000_dotnet.JPG)
-
 C# managed client
+> ![5000 in C#](./assets/5000_dotnet.JPG)
 
 ### 2. Half million transactions, 1.000 per batch
 
@@ -103,7 +103,7 @@ BATCH_SIZE = 1000;
 Zig
 > ![1000 batches in zig](./assets/1000_zig.JPG)
 
-C#
+C# managed client
 > ![1000 in C#](./assets/1000_dotnet.JPG)
 
 ### 3. Two-phase transactions, only 2 per batch
@@ -119,10 +119,10 @@ BATCH_SIZE = 2;
 Zig
 > ![500 batches in zig](./assets/2_twophase_zig.JPG)
 
-C#
+C# managed client
 > ![500 in C#](./assets/2_twophase_dotnet.JPG)
 
-### 4. Profiling
+### 4. Profiling the managed client
 
 The profiler shows most of the time spent on waiting for IO operations.
 
@@ -130,10 +130,11 @@ The profiler shows most of the time spent on waiting for IO operations.
 
 TigerBeetle uses `io_uring`, and we use whatever the DotNet SDK implementation does. [Maybe in future releases, DotNet will support `io_uring`](https://github.com/dotnet/runtime/issues/51985)
 
-### 5. Windows and old Linuxes
+### 5. Compatibility
 
-It can run on environments where native code isn't compatible or allowed.
-The managed client does not depend on native code, and it can run on Windows and old Linux distributions.
+The native client can only run on the same platforms supported by TigerBeetle, currently Linux > 5.1 and OSX (Windows support is planned).
+
+The managed client can run on environments where native code isn't compatible or allowed, like Windows and old Linux distributions.
 
 ## TODO List
 

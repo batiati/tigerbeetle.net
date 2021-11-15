@@ -54,6 +54,9 @@ if [[ $1 == "zig" ]]; then
 else
 
     echo "Dotnet"
+    cd src/libtigerbeetle/
+    ../../zig/zig build -Drelease-safe
+    cd ../..
     dotnet/dotnet run --project src/TigerBeetle.Benchmarks -c Release -- $1
 
 fi
