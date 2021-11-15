@@ -32,20 +32,32 @@ The **managed client backend** is a pure C# implementation based on the same pri
 
 # Benchmarking
 
-1. Install [Zig](https://ziglang.org/)
+1. Clone this repo
 
+> ```bash
+> $ git clone --recurse-submodules https://github.com/batiati/tigerbeetle.net
+> $ cd tigerbeetle.net
+> ```
+
+2. Chmod the scripts
+
+> ```bash
+> $ chmod +x scripts/*.sh
+> ```
+
+3. Install [Zig](https://ziglang.org/)
 
 > ```bash
 > $ scripts/install_zig.sh
 > ```
 
-2. Install [DotNet](https://docs.microsoft.com/en-us/dotnet/)
+4. Install [DotNet](https://docs.microsoft.com/en-us/dotnet/)
 
 > ```
 > $ scripts/install_dotnet.sh
 > ```
 
-3. Run the `benchmark.sh` script passing `zig`, `native` or `managed` as argument to run each version.
+5. Run the `benchmark.sh` script passing `zig`, `native` or `managed` as argument to run each version.
 
 > ```bash
 > $ scripts/benchmark.sh native
@@ -57,7 +69,6 @@ The **managed client backend** is a pure C# implementation based on the same pri
 > ```bash
 > $ scripts/full_benchmark.sh
 > ```
-
 
 ### 1. One million transactions, 5.000 per batch
 
