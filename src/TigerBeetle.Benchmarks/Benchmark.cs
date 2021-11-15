@@ -90,7 +90,7 @@ namespace TigerBeetle.Benchmarks
 			Console.WriteLine($"Benchmarking.Net ... {clientType}");
 
 			var queue = new TimedQueue();
-			using var client = new Client(clientType, 0, new IPEndPoint[] { IPEndPoint.Parse("127.0.0.1:3001") });
+			var client = new Client(clientType, 0, new IPEndPoint[] { IPEndPoint.Parse("127.0.0.1:3001") });
 			
 			WaitForConnect();
 
