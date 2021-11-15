@@ -6,69 +6,13 @@ using System.Net;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using TigerBeetle.Protocol;
+using TigerBeetle.Managed;
 
-namespace TigerBeetle
+namespace TigerBeetle.Native
 {
 	internal sealed class NativeClientImpl : IClientImpl
 	{
 		#region InnerTypes
-
-		private static class PInvoke
-		{
-			#region Fields
-
-			private const string LIB_NAME = "tigerbeetle";
-
-			#endregion Fields
-
-			#region Methods
-
-			[DllImport(LIB_NAME)]
-			public static extern NativeResult TB_Init();
-
-			[DllImport(LIB_NAME)]
-			public static extern NativeResult TB_Deinit();
-
-			[DllImport(LIB_NAME)]
-			public static extern NativeResult TB_CreateClient(UInt128 clientId, uint cluster, [MarshalAs(UnmanagedType.LPStr)] string addresses_raw, ref IntPtr handle);
-
-			[DllImport(LIB_NAME)]
-			public static extern NativeResult TB_DestroyClient(IntPtr handle);
-
-			[DllImport(LIB_NAME)]
-			public static extern NativeResult TB_GetMessage(IntPtr handle, out IntPtr messageHandle, out IntPtr messageBodyBuffer, out nint messageBodyBufferLen);
-
-			[DllImport(LIB_NAME)]
-			public static extern NativeResult TB_UnrefMessage(IntPtr handle, IntPtr messageHandle);
-
-			[DllImport(LIB_NAME)]
-			public static extern NativeResult TB_Request(IntPtr handle, byte operation, IntPtr messageHandle, nint messageBodySize, [MarshalAs(UnmanagedType.FunctionPtr)] NativeCallback callback);
-
-			[DllImport(LIB_NAME)]
-			public static extern NativeResult TB_Tick(IntPtr handle);
-
-			[DllImport(LIB_NAME)]
-			public static extern NativeResult TB_RunFor(IntPtr handle, uint ms);
-
-			#endregion Methods
-		}
-
-		private enum NativeResult : uint
-		{
-			SUCCESS = 0,
-			ALREADY_INITIALIZED = 1,
-			IO_URING_FAILED = 2,
-			INVALID_ADDRESS = 3,
-			ADDRESS_LIMIT_EXCEEDED = 4,
-			INVALID_HANDLE = 5,
-			MESSAGE_POOL_EXHAUSTED = 6,
-			TICK_FAILED = 8,
-			OUT_OF_MEMORY = 9,
-		}
-
-		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		private delegate void NativeCallback(Operation operation, IntPtr data, nint size);
 
 		#region Documentation
 
@@ -101,7 +45,7 @@ namespace TigerBeetle
 		#region Documentation
 
 		/// <summary>
-		/// Just a holder to prevent GC on callback
+		/// Just a holder to prevent GC to collect the callback delegate
 		/// It is stored in the Task's asyncState
 		/// </summary>
 
@@ -109,7 +53,7 @@ namespace TigerBeetle
 
 		private sealed class StateHolder
 		{
-			public NativeCallback? callback;
+			public PInvoke.NativeCallback? callback;
 		}
 
 		#endregion InnerTypes
@@ -216,7 +160,7 @@ namespace TigerBeetle
 			return completionSource.Task;
 		}
 
-		private void Request<TBody>(Operation operation, NativeCallback callback, IEnumerable<TBody> body)
+		private void Request<TBody>(Operation operation, PInvoke.NativeCallback callback, IEnumerable<TBody> body)
 			where TBody : IData
 		{
 			MessageHandle message = default;
@@ -264,7 +208,7 @@ namespace TigerBeetle
 				try
 				{
 					PInvoke.TB_Tick(handle);
-					PInvoke.TB_RunFor(handle, 5);
+					PInvoke.TB_RunFor(handle, (int)Config.TickMs);
 				}
 				catch (ThreadAbortException)
 				{

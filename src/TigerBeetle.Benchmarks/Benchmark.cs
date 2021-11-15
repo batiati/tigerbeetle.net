@@ -82,12 +82,12 @@ namespace TigerBeetle.Benchmarks
 
 		public static async Task Main()
 		{
-			string[] args = Environment.GetCommandLineArgs();
-
 			var clientType = ClientType.Managed;
+
+			string[] args = Environment.GetCommandLineArgs();
 			if (args.Length > 1) Enum.TryParse<ClientType>(args.Last(), ignoreCase: true, out clientType);
 
-			Console.WriteLine($"Benchmarking.Net ... ClientType {clientType}");
+			Console.WriteLine($"Benchmarking.Net ... {clientType}");
 
 			var queue = new TimedQueue();
 			var client = new Client(clientType, 0, new IPEndPoint[] { IPEndPoint.Parse("127.0.0.1:3001") });
@@ -161,9 +161,13 @@ namespace TigerBeetle.Benchmarks
 
 				if (IS_TWO_PHASE_COMMIT)
 				{
+					#pragma warning disable CS0162 // Unreachable code detected
+					
 					var commitBatch = commits.Skip(batchCount * BATCH_SIZE).Take(BATCH_SIZE);
 					async Task commitTransfers() => _ = await client.CommitTransfersAsync(commitBatch);
 					queue.Batches.Enqueue((commitTransfers, true));
+
+					#pragma warning restore CS0162
 				}
 
 				batchCount += 1;

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace TigerBeetle.Protocol
+namespace TigerBeetle
 {
 	public interface IData
 	{

@@ -2,7 +2,7 @@
 
 namespace TigerBeetle
 {
-	public sealed class Transfer : Protocol.IData
+	public sealed class Transfer : IData
 	{
 		#region Fields
 

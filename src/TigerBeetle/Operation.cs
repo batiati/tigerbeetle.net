@@ -1,4 +1,4 @@
-﻿namespace TigerBeetle.Protocol
+﻿namespace TigerBeetle
 {
 	internal enum Operation : byte
 	{

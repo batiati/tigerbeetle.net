@@ -16,6 +16,12 @@
     <ProjectReference Include="..\TigerBeetle\TigerBeetle.csproj" />
   </ItemGroup>
 
+	<ItemGroup>
+		<Content Include="..\TigerBeetle\Native\runtimes\$(NETCoreSdkRuntimeIdentifier)\native\*.*">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
   <ItemGroup>
     <Folder Include="Properties\" />
   </ItemGroup>

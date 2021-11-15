@@ -3,6 +3,7 @@
   <PropertyGroup>
     <_LastSelectedProfileId>C:\Users\batiati\source\repos\TigerBeetle.Net\src\TigerBeetle.Benchmarks\Properties\PublishProfiles\FolderProfile.pubxml</_LastSelectedProfileId>
     <ActiveDebugProfile>TigerBeetle.Benchmarks</ActiveDebugProfile>
+    <ShowAllFiles>false</ShowAllFiles>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DebuggerFlavor>ProjectDebugger</DebuggerFlavor>

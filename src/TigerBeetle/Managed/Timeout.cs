@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 
-namespace TigerBeetle.Protocol
+namespace TigerBeetle.Managed
 {
 	internal sealed class Timeout
 	{
@@ -18,15 +18,32 @@ namespace TigerBeetle.Protocol
 
 		#endregion Fields
 
-		public UInt128 Id { get => id; set => id = value; }
+		#region Constructor
 
-		public string Name { get => name; set => name = value; }
+		public Timeout(UInt128 id, string name, ulong after)
+		{
+			this.id = id;
+			this.name = name;
+			this.after = after;
+		}
 
-		public ulong After { get => after; set => after = value; }
+		#endregion Constructor
+
+		#region Properties
+
+		public UInt128 Id { get => id; }
+
+		public string Name { get => name; }
+
+		public ulong After { get => after; }
 
 		public byte Attempts { get => attempts; }
 
 		public bool Ticking { get => ticking; }
+
+		#endregion Properties
+
+		#region Methods
 
 		public static ulong ExponentialBackoffWithJitter(Random prng, ulong min, ulong max, ulong attempt)
 		{
@@ -170,6 +187,7 @@ namespace TigerBeetle.Protocol
 			if (ticking) ticks += 1;
 		}
 
+		#endregion Methods
 	}
 }
 

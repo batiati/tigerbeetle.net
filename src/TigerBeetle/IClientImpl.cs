@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using TigerBeetle.Protocol;
+using TigerBeetle.Managed;
 
 namespace TigerBeetle
 {

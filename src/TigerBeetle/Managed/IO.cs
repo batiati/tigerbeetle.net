@@ -5,8 +5,16 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 
-namespace TigerBeetle.Protocol
+namespace TigerBeetle.Managed
 {
+	#region Documentation
+
+	/// <summary>
+	/// An io_uring mimic to provide the same interface for both native and managed clients
+	/// </summary>
+
+	#endregion Documentation
+
 	internal sealed class IO
 	{
 		#region InnerTypes
@@ -15,15 +23,23 @@ namespace TigerBeetle.Protocol
 		{
 			#region Fields
 
-			private readonly ManualResetEventSlim ev = new();
+			private readonly ManualResetEventSlim ev;
+			private bool isCompleted;
 
 			#endregion Fields
 
+			#region Constructor
+
+			public CompletionEventArgs(ManualResetEventSlim ev)
+			{
+				this.ev = ev;
+			}
+
+			#endregion Constructor
+
 			#region Properties
 
-			public WaitHandle WaitHandle => ev.WaitHandle;
-
-			public bool IsCompleted => ev.IsSet;
+			public bool IsCompleted => isCompleted;
 
 			#endregion Properties
 
@@ -31,17 +47,18 @@ namespace TigerBeetle.Protocol
 
 			public void Reset()
 			{
-				ev.Reset();
+				isCompleted = false;
 			}
 
-			public void SyncSet()
+			public void Set()
 			{
+				isCompleted = true;
 				ev.Set();
 			}
 
 			protected override void OnCompleted(SocketAsyncEventArgs e)
 			{
-				ev.Set();
+				Set();
 			}
 
 			#endregion Methods
@@ -54,15 +71,28 @@ namespace TigerBeetle.Protocol
 			private SocketAsyncOperation asyncOperation;
 			private Socket? socket;
 			private Action<SocketAsyncEventArgs>? callback;
-			private readonly CompletionEventArgs e = new();
+			private readonly CompletionEventArgs e;
 
 			#endregion Fields
 
+			#region Constructor
+
+			public Completion(ManualResetEventSlim ev)
+			{
+				e = new CompletionEventArgs(ev);
+			}
+
+			#endregion Constructor
+
+			#region Properties
+
 			public SocketAsyncOperation AsyncOperation => asyncOperation;
 
-			public WaitHandle WaitHandle => e.WaitHandle;
-
 			public bool IsCompleted => e.IsCompleted;
+
+			#endregion Properties
+
+			#region Methods
 
 			public void Submit(Socket socket, SocketAsyncOperation asyncOperation, Action<SocketAsyncEventArgs> callback, object? asyncState, Memory<byte> buffer = default, IPEndPoint? address = null)
 			{
@@ -97,7 +127,7 @@ namespace TigerBeetle.Protocol
 						throw new NotImplementedException();
 				}
 
-				if (!pending) e.SyncSet();
+				if (!pending) e.Set();
 			}
 
 			public void Complete()
@@ -113,6 +143,8 @@ namespace TigerBeetle.Protocol
 				e.SetBuffer(default);
 				e.Reset();
 			}
+
+			#endregion Methods
 		}
 
 		#endregion InnerTypes
@@ -120,27 +152,13 @@ namespace TigerBeetle.Protocol
 		#region Fields
 
 		private const int POOL_SIZE = 128;
-		private const int MAX_HAIT_HANDLES = 64 - 1;
+
+		// TODO: implement a intrusive LinkedList in order to reduce node allocations and GC
 
 		private readonly LinkedList<Completion> pool = new();
 		private readonly LinkedList<Completion> submited = new();
 		private readonly LinkedList<Completion> completed = new();
-
-		private ManualResetEventSlim submitedEvent;
-		private WaitHandle[][] waitHandlesPool;
-
-
-		public void SetSubmissionWaitHandle(ManualResetEventSlim ev)
-		{
-			this.submitedEvent = ev;
-			waitHandlesPool = new WaitHandle[MAX_HAIT_HANDLES][];
-
-			for (int i = 0; i < MAX_HAIT_HANDLES; i++)
-			{
-				waitHandlesPool[i] = new WaitHandle[i + 1];
-				waitHandlesPool[i][0] = ev.WaitHandle;
-			}
-		}
+		private readonly ManualResetEventSlim submitedEvent = new();
 
 		#endregion Fields
 
@@ -150,7 +168,7 @@ namespace TigerBeetle.Protocol
 		{
 			for (int i = 0; i < POOL_SIZE; i++)
 			{
-				pool.AddLast(new Completion());
+				pool.AddLast(new Completion(submitedEvent));
 			}
 		}
 
@@ -188,33 +206,10 @@ namespace TigerBeetle.Protocol
 
 		public void RunFor(int ms)
 		{
-			var now = DateTime.Now;
-
-			var waitHandles = GetWaitHandles();
-			WaitHandle.WaitAny(waitHandles, ms, exitContext: false);
-			submitedEvent.Reset();
-		}
-
-		private WaitHandle[] GetWaitHandles()
-		{
-			var handleIndex = submited.Count < waitHandlesPool.Length ? submited.Count : waitHandlesPool.Length - 1;
-			var waitHandles = waitHandlesPool[handleIndex];
-
-			if (submited.Count > 0)
+			if (submitedEvent.Wait(ms))
 			{
-				int i = 1;
-				var node = submited.First;
-				while (node != null)
-				{
-					waitHandles[i] = node.Value.WaitHandle;
-					i += 1;
-
-					if (i == waitHandles.Length) break;
-					node = node.Next;
-				}
+				submitedEvent.Reset();
 			}
-
-			return waitHandles;
 		}
 
 		private void CheckSubmited()

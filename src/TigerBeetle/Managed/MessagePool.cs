@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace TigerBeetle.Protocol
+namespace TigerBeetle.Managed
 {
 	#region Documentation
 

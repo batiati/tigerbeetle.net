@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Net;
 
-namespace TigerBeetle.Protocol
+namespace TigerBeetle.Managed
 {
 	internal sealed class MessageBus
 	{

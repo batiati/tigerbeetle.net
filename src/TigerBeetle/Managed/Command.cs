@@ -1,4 +1,4 @@
-﻿namespace TigerBeetle.Protocol
+﻿namespace TigerBeetle.Managed
 {
 
 	internal enum Command : byte

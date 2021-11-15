@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 namespace TigerBeetle
 {
 	[StructLayout(LayoutKind.Explicit, Size = SIZE)]
-	public unsafe struct UInt128 : Protocol.IData
+	public unsafe struct UInt128 : IData
 	{
 		#region Fields
 

@@ -2,7 +2,7 @@
 
 namespace TigerBeetle
 {
-	public sealed class Commit : Protocol.IData
+	public sealed class Commit : IData
 	{
 		#region Fields
 

@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace TigerBeetle.Protocol
+namespace TigerBeetle.Managed
 {
 	/// Network message and journal entry header:
 	/// We reuse the same header for both so that prepare messages from the leader can simply be

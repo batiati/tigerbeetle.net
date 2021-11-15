@@ -2,7 +2,7 @@
 
 namespace TigerBeetle
 {
-	public sealed class Account : Protocol.IData
+	public sealed class Account : IData
 	{
 		#region Fields
 

@@ -5,9 +5,8 @@ using System.Net;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using TigerBeetle.Protocol;
 
-namespace TigerBeetle
+namespace TigerBeetle.Managed
 {
 	internal sealed class ManagedClientImpl : IClientImpl
 	{
@@ -61,11 +60,11 @@ namespace TigerBeetle
 
 		/// The number of ticks without a reply before the client resends the inflight request.
 		/// Dynamically adjusted as a function of recent request round-trip time.
-		private Protocol.Timeout requestTimeout;
+		private Managed.Timeout requestTimeout;
 
 		/// The number of ticks before the client broadcasts a ping to the cluster.
 		/// Used for end-to-end keepalive, and to discover a new leader between requests.
-		private Protocol.Timeout pingTimeout;
+		private Managed.Timeout pingTimeout;
 
 		private ulong ticks;
 
@@ -100,24 +99,10 @@ namespace TigerBeetle
 
 			replicaCount = (byte)configuration.Length;
 			prng = new Random(this.id.AsReadOnlySpan<int>()[0]);
-
 			bus = new MessageBus(prng, cluster, configuration, OnMessageReceived);
-			bus.io.SetSubmissionWaitHandle(requestQueueEvent);
 
-			requestTimeout = new Protocol.Timeout
-			{
-				Id = id,
-				Name = "request_timeout",
-				After = Config.RttTicks * Config.RttMultiple
-			};
-
-			pingTimeout = new Protocol.Timeout
-			{
-				Id = id,
-				Name = "ping_timeout",
-				After = 30_000 / Config.TickMs
-			};
-
+			requestTimeout = new Managed.Timeout(id, "request_timeout", Config.RttTicks * Config.RttMultiple);
+			pingTimeout = new Managed.Timeout(id, "ping_timeout", 30_000 / Config.TickMs);
 			requestQueue = new Queue<RequestData>(Config.MessageBusMessagesMax - 1);
 
 			pingTimeout.Start();
@@ -137,7 +122,7 @@ namespace TigerBeetle
 		{
 			UInt128 actionId = Guid.NewGuid();
 			TResult[]? result = null;
-			void callback(UInt128 userData, Protocol.Operation action, ReadOnlySpan<byte> reply)
+			void callback(UInt128 userData, Operation action, ReadOnlySpan<byte> reply)
 			{
 				lock (this)
 				{
@@ -167,7 +152,7 @@ namespace TigerBeetle
 			UInt128 actionId = Guid.NewGuid();
 
 			var completionSource = new TaskCompletionSource<TResult[]>();
-			void callback(UInt128 userData, Protocol.Operation action, ReadOnlySpan<byte> reply)
+			void callback(UInt128 userData, Operation action, ReadOnlySpan<byte> reply)
 			{
 				Trace.Assert(userData == actionId);
 				Trace.Assert(action == operation);
@@ -564,7 +549,7 @@ namespace TigerBeetle
 					Tick();
 
 					bus.io.Tick();
-					bus.io.RunFor(5);
+					bus.io.RunFor((int)Config.TickMs);
 				}
 				catch (ThreadAbortException)
 				{

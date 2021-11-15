@@ -12,7 +12,16 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DefineConstants></DefineConstants>
   </PropertyGroup>
+	<ItemGroup>
+		<Content Include="Native\runtimes\**\*">
+			<PackagePath>%(Identity)</PackagePath>
+			<Pack>true</Pack>
+		</Content>
+	</ItemGroup>
   <ItemGroup>
     <PackageReference Include="Blake3Core" Version="0.1.0" />
   </ItemGroup>
+	<ItemGroup>
+		<AssemblyMetadataCommand Remove="GitDescription" />
+	</ItemGroup>
 </Project>

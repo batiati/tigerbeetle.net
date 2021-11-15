@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 
-namespace TigerBeetle.Protocol
+namespace TigerBeetle.Managed
 {
 	internal unsafe class Header
 	{

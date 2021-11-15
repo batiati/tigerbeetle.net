@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace TigerBeetle.Protocol
+namespace TigerBeetle.Managed
 {
 	internal sealed class Message
 	{

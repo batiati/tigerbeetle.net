@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using TigerBeetle.Protocol;
 
 namespace TigerBeetle
 {
@@ -19,12 +18,12 @@ namespace TigerBeetle
 
 		public Client(ClientType type, uint cluster, IPEndPoint[] configuration)
 		{
-			if (configuration == null || configuration.Length == 0 || configuration.Length > Config.ReplicasMax) throw new ArgumentException(nameof(configuration));
+			if (configuration == null || configuration.Length == 0 || configuration.Length > Managed.Config.ReplicasMax) throw new ArgumentException(nameof(configuration));
 
 			impl = type switch
 			{
-				ClientType.Managed => new ManagedClientImpl(cluster, configuration),
-				ClientType.Native => new NativeClientImpl(cluster, configuration),
+				ClientType.Managed => new Managed.ManagedClientImpl(cluster, configuration),
+				ClientType.Native => new Native.NativeClientImpl(cluster, configuration),
 				_ => throw new NotImplementedException(),
 			};
 		}
@@ -35,7 +34,7 @@ namespace TigerBeetle
 
 		public uint Cluster => impl.Cluster;
 
-		public ClientType ClientType => impl is NativeClientImpl ? ClientType.Native : ClientType.Managed;
+		public ClientType ClientType => impl is Native.NativeClientImpl ? ClientType.Native : ClientType.Managed;
 
 		#region Methods
 

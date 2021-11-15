@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Net.Sockets;
 using System.Threading;
 
-namespace TigerBeetle.Protocol
+namespace TigerBeetle.Managed
 {
 	internal sealed class Connection
 	{
@@ -122,7 +122,7 @@ namespace TigerBeetle.Protocol
 		private void OnConnectWithExponentialBackoffResult(object asyncState)
 		{
 			Trace.Assert(connectWithExponentialBackoffTimer != null);
-			connectWithExponentialBackoffTimer.Dispose();
+			connectWithExponentialBackoffTimer!.Dispose();
 			connectWithExponentialBackoffTimer = null;
 
 			Trace.Assert(recvSubmitted);
@@ -144,7 +144,7 @@ namespace TigerBeetle.Protocol
 			recvSubmitted = true;
 
 			var address = bus.Configuration[replica];
-			bus.io.Connect(socket, OnConnectResult, bus, address);
+			bus.io.Connect(socket!, OnConnectResult, bus, address);
 		}
 
 		private void OnConnectResult(SocketAsyncEventArgs e)
@@ -267,8 +267,8 @@ namespace TigerBeetle.Protocol
 			Trace.Assert(recvProgress < Config.MessageSizeMax);
 			Trace.Assert(recvMessage != null);
 
-			var buffer = recvMessage.Buffer.AsMemory(recvProgress..Config.MessageSizeMax);
-			bus.io.Receive(socket, OnRecvResult, bus, buffer);
+			var buffer = recvMessage!.Buffer.AsMemory(recvProgress..Config.MessageSizeMax);
+			bus.io.Receive(socket!, OnRecvResult, bus, buffer);
 		}
 
 		private void OnRecvResult(SocketAsyncEventArgs e)
@@ -327,7 +327,7 @@ namespace TigerBeetle.Protocol
 		{
 			Trace.Assert(recvMessage != null);
 
-			var data = recvMessage.Buffer.AsSpan(recvParsed..recvProgress);
+			var data = recvMessage!.Buffer.AsSpan(recvParsed..recvProgress);
 
 			if (data.Length < HeaderData.SIZE)
 			{
@@ -485,7 +485,7 @@ namespace TigerBeetle.Protocol
 			sendSubmitted = true;
 
 			var buffer = message.Buffer.AsMemory(sendProgress..message.Header.Size);
-			bus.io.Send(socket, OnSendResult, bus, buffer);
+			bus.io.Send(socket!, OnSendResult, bus, buffer);
 		}
 
 		private void OnSendResult(SocketAsyncEventArgs e)
@@ -550,7 +550,7 @@ namespace TigerBeetle.Protocol
 			{
 				try
 				{
-					socket.Shutdown(SocketShutdown.Both);
+					socket!.Shutdown(SocketShutdown.Both);
 				}
 				catch (SocketException)
 				{
@@ -606,7 +606,7 @@ namespace TigerBeetle.Protocol
 			{
 				// It's OK to use the send completion here as we know that no send
 				// operation is currently in progress.
-				socket.Close();
+				socket!.Close();
 				OnCloseResult(bus);
 			}
 			finally
