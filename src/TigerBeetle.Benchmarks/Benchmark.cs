@@ -122,6 +122,7 @@ namespace TigerBeetle.Benchmarks
 					Code = 0,
 					Amount = Currency.ZAR.ToUInt64(0.01M),
 					Flags = IS_TWO_PHASE_COMMIT ? TransferFlags.TwoPhaseCommit : TransferFlags.None,
+					Timeout = IS_TWO_PHASE_COMMIT ? int.MaxValue : 0,
 				};
 			}
 
