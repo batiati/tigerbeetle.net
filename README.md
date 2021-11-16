@@ -72,8 +72,6 @@ Or run the full benchmark to run all three versions in a row.
 $ scripts/full_benchmark.sh
 ```
 
-> # **TODO:** Add updated benchmarks results
-
 ### 1. One million transactions, 5.000 per batch
 
 The C# benchmark using _native client_ has pair performance with the original _tigerbeetle benchmark_, outperforming it sometimes.
