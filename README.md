@@ -76,7 +76,9 @@ $ scripts/full_benchmark.sh
 
 ### 1. One million transactions, 5.000 per batch
 
-Currently, the managed client runs about to ~40% slower than the native client, using the default parameters.
+The C# benchmark using _native client_ has pair performance with the original _tigerbeetle benchmark_, outperforming it sometimes.
+
+The  _managed client_ runs about 40~50% slower than the original _tigerbeetle benchmark_, using default parameters.
 
 ```
 MAX_TRANSFERS = 1_000_000;
@@ -84,15 +86,13 @@ IS_TWO_PHASE_COMMIT = false;
 BATCH_SIZE = 5_000;
 ```
 
-Zig original benchmark
-> ![5000 batches in zig](./assets/5000_zig.JPG)
-
-C# managed client
-> ![5000 in C#](./assets/5000_dotnet.JPG)
+> ![5000 transactions per batch](./assets/benchmark_1M.png)
 
 ### 2. Half million transactions, 1.000 per batch
 
-The managed client performs better with smaller batches.
+The C# benchmark using _native client_ outperforms the original _tigerbeetle benchmark_, probably due differences between the thread models. The zig benchmark calls `tick()` from the main thread and the C# benchmark uses async/await with a background thread ticking.
+
+The _managed client_ performs better with smaller batches, but still presents high latency.
 
 ```
 MAX_TRANSFERS = 500_000;
@@ -100,15 +100,13 @@ IS_TWO_PHASE_COMMIT = false;
 BATCH_SIZE = 1000;
 ```
 
-Zig
-> ![1000 batches in zig](./assets/1000_zig.JPG)
-
-C# managed client
-> ![1000 in C#](./assets/1000_dotnet.JPG)
+> ![1000 transactions per batch](./assets/benchmark_500K.png)
 
 ### 3. Two-phase transactions, only 2 per batch
 
-Pretty close with only 2 transactions per batch.
+The C# benchmark using _native client_ outperforms the original _tigerbeetle benchmark_ in this scenario too. We need to investigate this ...
+
+The _managed client_ came pretty close with only 2 transactions per batch, with acceptable latency.
 
 ```
 MAX_TRANSFERS = 1_000;
@@ -116,11 +114,11 @@ IS_TWO_PHASE_COMMIT = true;
 BATCH_SIZE = 2;
 ```
 
-Zig
-> ![500 batches in zig](./assets/2_twophase_zig.JPG)
+> ![two-phase-commit](./assets/benchmark_twophase_commit.png)
 
-C# managed client
-> ![500 in C#](./assets/2_twophase_dotnet.JPG)
+### 5. Profiling the native client
+
+> ### TODO
 
 ### 4. Profiling the managed client
 
@@ -138,7 +136,7 @@ The managed client can run on environments where native code isn't compatible or
 
 ## TODO List
 
-- [ ] Benchmarks scripts.
+- [X] Benchmarks scripts.
 - [ ] Build and embeed the native library.
 - [ ] Error handling and reconnection for the managed client.
 - [ ] More tests

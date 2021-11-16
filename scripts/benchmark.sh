@@ -49,6 +49,7 @@ sleep 1
 if [[ $1 == "zig" ]]; then
 
     echo "Zig"
+    echo "Benchmarking..."
     zig/zig run -OReleaseSafe src/libtigerbeetle/src/tigerbeetle/src/benchmark.zig
 
 else
