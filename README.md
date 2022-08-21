@@ -1,5 +1,9 @@
 # TigerBeetle.Net
 
+# ! ARCHIVED !
+## This project was deprecated, plese refer to the oficial client
+
+
 A C# client for [TigerBeetle](https://github.com/coilhq/tigerbeetle)
 
 **[Compatible with .Net Standard 2.1](https://docs.microsoft.com/en-us/dotnet/standard/net-standard)**
